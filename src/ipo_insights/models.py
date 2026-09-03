@@ -32,6 +32,10 @@ class IPOInsight:
     recommendation_score: int
     risk_level: str
     thesis: str
+    valuation_signal: str = "Neutral"
+    confidence: str = "Medium"
+    key_drivers: List[str] = field(default_factory=list)
+    comparables: List[str] = field(default_factory=list)
 
     def generate_report(self) -> str:
         lines = [
@@ -47,10 +51,25 @@ class IPOInsight:
             "",
             f"Recommendation Score: {self.recommendation_score}/10",
             f"Risk Level: {self.risk_level}",
+            f"Valuation Signal: {self.valuation_signal}",
+            f"Confidence: {self.confidence}",
             "",
-            "Investment Thesis:",
-            self.thesis,
+            "Key Drivers:",
         ]
+
+        if self.key_drivers:
+            lines.extend(f"- {driver}" for driver in self.key_drivers)
+        else:
+            lines.append("- No additional drivers captured.")
+
+        lines.extend(["", "Comparable Context:"])
+
+        if self.comparables:
+            lines.extend(f"- {company}" for company in self.comparables)
+        else:
+            lines.append("- No comparable benchmark data available.")
+
+        lines.extend(["", "Investment Thesis:", self.thesis])
         return "\n".join(lines)
 
 

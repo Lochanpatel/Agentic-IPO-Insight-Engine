@@ -5,6 +5,7 @@ from __future__ import annotations
 from ipo_insights.agents.coordinator import AgentCoordinator
 from ipo_insights.config import get_settings
 from ipo_insights.models import IPOInsight
+from ipo_insights.reporting import build_detailed_report
 
 
 class IPOAnalysisEngine:
@@ -23,4 +24,4 @@ class IPOAnalysisEngine:
 
     def run(self, ticker: str | None = None, company_name: str | None = None, filing_url: str = "") -> str:
         insight = self.analyze_ipo(ticker=ticker, company_name=company_name, filing_url=filing_url)
-        return insight.generate_report()
+        return build_detailed_report(insight)

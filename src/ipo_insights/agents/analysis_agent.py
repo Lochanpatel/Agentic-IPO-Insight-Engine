@@ -33,6 +33,27 @@ class AnalysisAgent(BaseAgent):
             recommendation_score += 1
         recommendation_score = max(1, min(10, recommendation_score))
 
+        if recommendation_score >= 8:
+            valuation_signal = "Bullish"
+            confidence = "High"
+        elif recommendation_score >= 6:
+            valuation_signal = "Constructive"
+            confidence = "Medium"
+        else:
+            valuation_signal = "Cautious"
+            confidence = "Low"
+
+        key_drivers = [
+            f"Large market opportunity in {research_data.industry}.",
+            f"Revenue growth trajectory of {research_data.growth_rate * 100:.1f}% supports long-term demand.",
+            f"Competitive positioning: {research_data.competitive_position}.",
+        ]
+        comparables = [
+            "Peer A: similar growth profile with robust pipeline execution",
+            "Peer B: moderate valuation premium amid strong market demand",
+            "Peer C: risk-adjusted benchmark for execution quality",
+        ]
+
         thesis = (
             f"{research_data.company_name} benefits from a sizeable addressable market and durable growth trajectory, "
             "with a competitive position that supports a constructive near-term IPO thesis. "
@@ -47,6 +68,10 @@ class AnalysisAgent(BaseAgent):
             recommendation_score=recommendation_score,
             risk_level=risk_info["risk_level"],
             thesis=thesis,
+            valuation_signal=valuation_signal,
+            confidence=confidence,
+            key_drivers=key_drivers,
+            comparables=comparables,
         )
 
     def run(self, research_data: ResearchData, filing_summary: dict | None = None):
