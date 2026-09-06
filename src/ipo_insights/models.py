@@ -2,13 +2,30 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Dict, List
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
 class ResearchData:
-    """Structured market and company research data."""
+    """Structured market and company research data.
+    
+    Contains core market research, company fundamentals, and competitive
+    analysis used as input to the analysis agent.
+    
+    Attributes:
+        company_name: Name of the company
+        ticker: Stock ticker symbol
+        industry: Target industry/sector
+        market_size: Total addressable market (TAM) in dollars
+        growth_rate: Expected growth rate as decimal (0-1+)
+        competitive_position: Description of competitive standing
+        filing_url: Optional URL to SEC filing document
+        notes: Optional list of research notes or insights
+    """
 
     company_name: str
     ticker: str
@@ -19,10 +36,65 @@ class ResearchData:
     filing_url: str = ""
     notes: List[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        """Validate research data after initialization."""
+        if not self.company_name or not self.ticker:
+            logger.warning("Missing company_name or ticker in ResearchData")
+        if self.market_size < 0:
+            logger.warning(f"Negative market_size in ResearchData: {self.market_size}")
+        if not (0 <= self.growth_rate <= 2):
+            logger.warning(f"Unusual growth_rate in ResearchData: {self.growth_rate}")
+
+    def get_summary(self) -> str:
+        """Get a summary string of the research data.
+        
+        Returns:
+            One-line summary of research data
+        """
+        return (
+            f"{self.company_name} ({self.ticker}) in {self.industry}: "
+            f"${self.market_size:,.0f} TAM, {self.growth_rate*100:.1f}% growth"
+        )
+
+    def to_dict(self) -> Dict[str, object]:
+        """Convert research data to dictionary.
+        
+        Returns:
+            Dictionary representation of research data
+        """
+        return {
+            "company_name": self.company_name,
+            "ticker": self.ticker,
+            "industry": self.industry,
+            "market_size": self.market_size,
+            "growth_rate": self.growth_rate,
+            "competitive_position": self.competitive_position,
+            "filing_url": self.filing_url,
+            "notes": self.notes,
+        }
+
 
 @dataclass
 class IPOInsight:
-    """Output object representing an IPO analysis insight."""
+    """Output object representing a complete IPO analysis insight.
+    
+    Contains all analysis results including recommendation scores, risk assessment,
+    financial summaries, and investment thesis.
+    
+    Attributes:
+        ticker: Stock ticker symbol
+        company_name: Company name
+        filing_url: Optional URL to SEC filing
+        market_summary: Summary of market opportunity
+        financial_summary: Summary of financial metrics
+        recommendation_score: Investment recommendation (1-10)
+        risk_level: Risk assessment (Low/Moderate/High)
+        thesis: Investment thesis statement
+        valuation_signal: Valuation signal (Bullish/Constructive/Cautious)
+        confidence: Confidence level (Low/Medium/High)
+        key_drivers: List of key investment drivers
+        comparables: List of comparable company benchmarks
+    """
 
     ticker: str
     company_name: str
@@ -37,7 +109,52 @@ class IPOInsight:
     key_drivers: List[str] = field(default_factory=list)
     comparables: List[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        """Validate IPOInsight after initialization."""
+        if not (1 <= self.recommendation_score <= 10):
+            logger.warning(f"Invalid recommendation_score: {self.recommendation_score}")
+        if self.risk_level not in ("Low", "Moderate", "High"):
+            logger.warning(f"Invalid risk_level: {self.risk_level}")
+        if self.valuation_signal not in ("Bullish", "Constructive", "Cautious", "Neutral"):
+            logger.warning(f"Invalid valuation_signal: {self.valuation_signal}")
+        if self.confidence not in ("Low", "Medium", "High"):
+            logger.warning(f"Invalid confidence: {self.confidence}")
+
+    def is_bullish(self) -> bool:
+        """Check if insight indicates bullish outlook.
+        
+        Returns:
+            True if recommendation is bullish
+        """
+        return self.valuation_signal == "Bullish" and self.recommendation_score >= 8
+
+    def is_cautious(self) -> bool:
+        """Check if insight indicates cautious outlook.
+        
+        Returns:
+            True if recommendation is cautious
+        """
+        return self.valuation_signal == "Cautious" and self.recommendation_score < 6
+
+    def get_risk_indicator(self) -> str:
+        """Get emoji/text risk indicator.
+        
+        Returns:
+            Risk indicator string
+        """
+        if self.risk_level == "High":
+            return "🔴 HIGH RISK"
+        elif self.risk_level == "Moderate":
+            return "🟡 MODERATE RISK"
+        else:
+            return "🟢 LOW RISK"
+
     def generate_report(self) -> str:
+        """Generate full text report from IPO insight.
+        
+        Returns:
+            Formatted multi-line report
+        """
         lines = [
             f"IPO Insight for {self.company_name} ({self.ticker})",
             "=" * 60,
@@ -72,16 +189,52 @@ class IPOInsight:
         lines.extend(["", "Investment Thesis:", self.thesis])
         return "\n".join(lines)
 
+    def to_dict(self) -> Dict[str, object]:
+        """Convert IPO insight to dictionary.
+        
+        Returns:
+            Dictionary representation of insight
+        """
+        return {
+            "ticker": self.ticker,
+            "company_name": self.company_name,
+            "filing_url": self.filing_url,
+            "market_summary": self.market_summary,
+            "financial_summary": self.financial_summary,
+            "recommendation_score": self.recommendation_score,
+            "risk_level": self.risk_level,
+            "thesis": self.thesis,
+            "valuation_signal": self.valuation_signal,
+            "confidence": self.confidence,
+            "key_drivers": self.key_drivers,
+            "comparables": self.comparables,
+        }
+
 
 @dataclass
 class FinancialMetrics:
+    """Financial metrics for IPO company analysis.
+    
+    Attributes:
+        revenue: Annual revenue in dollars
+        ebitda_margin: EBITDA as percentage of revenue (0-1)
+        net_margin: Net profit margin (0-1)
+        growth_rate: Expected growth rate (0-1+)
+        market_cap: Market capitalization in dollars
+    """
+
     revenue: float
     ebitda_margin: float
     net_margin: float
-    growth_rate: float
-    market_cap: float
+    growth_rate: float = 0.0
+    market_cap: float = 0.0
 
     def to_dict(self) -> Dict[str, float]:
+        """Convert metrics to dictionary.
+        
+        Returns:
+            Dictionary of financial metrics
+        """
         return {
             "revenue": self.revenue,
             "ebitda_margin": self.ebitda_margin,
@@ -89,3 +242,26 @@ class FinancialMetrics:
             "growth_rate": self.growth_rate,
             "market_cap": self.market_cap,
         }
+
+    def get_ev_revenue_multiple(self) -> float:
+        """Calculate EV/Revenue multiple.
+        
+        Returns:
+            EV/Revenue multiple, or 0 if revenue is 0
+        """
+        if self.revenue <= 0:
+            logger.warning("Cannot calculate EV/Revenue with zero revenue")
+            return 0.0
+        return self.market_cap / self.revenue
+
+    def get_pe_implied(self) -> float:
+        """Calculate implied P/E multiple (simplified).
+        
+        Returns:
+            Implied P/E multiple based on margins and EV/Revenue
+        """
+        net_income = self.revenue * self.net_margin
+        if net_income <= 0:
+            logger.warning("Cannot calculate P/E with non-positive net income")
+            return 0.0
+        return self.market_cap / net_income
