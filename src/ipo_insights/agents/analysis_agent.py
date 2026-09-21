@@ -119,6 +119,47 @@ class AnalysisAgent(BaseAgent):
         else:
             return "Cautious", "Low"
 
+    def _calculate_sentiment_score(self, research_data: ResearchData, risk_level: str) -> tuple[int, str]:
+        """Estimate sentiment based on growth, market, and risk posture.
+
+        Returns a normalized sentiment score from -100 to 100 plus label.
+        """
+        score = 50
+        score += min(25, int(research_data.growth_rate * 100))
+        score += 10 if "strong" in research_data.competitive_position.lower() else 0
+        score -= 10 if "weak" in research_data.competitive_position.lower() else 0
+        score -= 15 if risk_level == "High" else 0
+        score -= 5 if risk_level == "Moderate" else 0
+
+        score = max(-100, min(100, score))
+        if score >= 70:
+            label = "Bullish"
+        elif score >= 45:
+            label = "Positive"
+        elif score >= 20:
+            label = "Neutral"
+        else:
+            label = "Cautious"
+        return score, label
+
+    def _calculate_fair_value_estimate(self, valuation_range: dict[str, float]) -> float:
+        """Estimate fair value from base and scenario ranges."""
+        if not valuation_range:
+            return 0.0
+        values = list(valuation_range.values())
+        return round(sum(values) / len(values), 2)
+
+    def _build_risk_heatmap(self, market_size: float, growth_rate: float, competitive_position: str, risk_level: str) -> dict[str, str]:
+        """Summarize risk factors as a simple heatmap by category."""
+        position_text = competitive_position.lower()
+        heatmap = {
+            "market_size": "Low" if market_size >= 3_500_000_000 else "Medium",
+            "growth_rate": "Low" if growth_rate >= 0.25 else "Medium" if growth_rate >= 0.12 else "High",
+            "competition": "Low" if "strong" in position_text or "leader" in position_text else "Medium" if "differentiated" in position_text else "High",
+            "execution": "Low" if risk_level == "Low" else "Medium" if risk_level == "Moderate" else "High",
+        }
+        return heatmap
+
     def _calculate_valuation_range(self, market_cap: float, growth_rate: float, risk_level: str) -> dict[str, float]:
         """Estimate base, bull, and bear valuation ranges.
         
@@ -175,6 +216,16 @@ class AnalysisAgent(BaseAgent):
             float(research_data.growth_rate),
             str(risk_info["risk_level"]),
         )
+
+        sentiment_score, sentiment_label = self._calculate_sentiment_score(research_data, str(risk_info["risk_level"]))
+        fair_value_estimate = self._calculate_fair_value_estimate(valuation_range)
+        risk_heatmap = self._build_risk_heatmap(
+            float(research_data.market_size),
+            float(research_data.growth_rate),
+            research_data.competitive_position,
+            str(risk_info["risk_level"]),
+        )
+
         scenario_summary = (
             "Scenario view: base case assumes steady execution, bull case benefits from acceleration, "
             "while bear case reflects slower growth and increased execution risk."
@@ -224,6 +275,10 @@ class AnalysisAgent(BaseAgent):
             confidence=confidence,
             key_drivers=key_drivers,
             valuation_range=valuation_range,
+            fair_value_estimate=fair_value_estimate,
+            sentiment_score=sentiment_score,
+            sentiment_label=sentiment_label,
+            risk_heatmap=risk_heatmap,
             scenario_summary=scenario_summary,
             comparables=comparables,
         )

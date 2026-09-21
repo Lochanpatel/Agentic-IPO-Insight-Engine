@@ -108,6 +108,10 @@ class IPOInsight:
     confidence: str = "Medium"
     key_drivers: List[str] = field(default_factory=list)
     valuation_range: Dict[str, float] = field(default_factory=dict)
+    fair_value_estimate: float = 0.0
+    sentiment_score: int = 50
+    sentiment_label: str = "Neutral"
+    risk_heatmap: Dict[str, str] = field(default_factory=dict)
     scenario_summary: str = ""
     comparables: List[str] = field(default_factory=list)
 
@@ -174,8 +178,16 @@ class IPOInsight:
             lines.extend(["Scenario Analysis:"])
             for label, value in self.valuation_range.items():
                 lines.append(f"- {label.replace('_', ' ').title()}: ${value:,.0f}")
+            lines.append(f"Fair Value Estimate: ${self.fair_value_estimate:,.0f}")
+            lines.append(f"Sentiment: {self.sentiment_label} ({self.sentiment_score})")
             if self.scenario_summary:
                 lines.append(self.scenario_summary)
+            lines.append("")
+
+        if self.risk_heatmap:
+            lines.extend(["Risk Heatmap:"])
+            for label, level in self.risk_heatmap.items():
+                lines.append(f"- {label.replace('_', ' ').title()}: {level}")
             lines.append("")
 
         lines.extend([
@@ -221,6 +233,10 @@ class IPOInsight:
             "confidence": self.confidence,
             "key_drivers": self.key_drivers,
             "valuation_range": self.valuation_range,
+            "fair_value_estimate": self.fair_value_estimate,
+            "sentiment_score": self.sentiment_score,
+            "sentiment_label": self.sentiment_label,
+            "risk_heatmap": self.risk_heatmap,
             "scenario_summary": self.scenario_summary,
             "comparables": self.comparables,
         }
