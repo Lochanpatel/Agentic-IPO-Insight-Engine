@@ -213,6 +213,37 @@ class AnalysisAgent(BaseAgent):
             "demand_risk": "Low" if risk_level == "Low" else "Medium" if risk_level == "Moderate" else "High",
         }
 
+    def _determine_investment_grade(self, recommendation_score: int, risk_level: str, sentiment_label: str) -> str:
+        """Map a composite risk/reward signal to an actionable investment grade."""
+        if recommendation_score >= 8 and risk_level != "High" and sentiment_label in {"Bullish", "Positive"}:
+            return "Buy"
+        if recommendation_score >= 6 and risk_level != "High":
+            return "Accumulate"
+        if recommendation_score >= 4:
+            return "Watchlist"
+        return "Speculative"
+
+    def _build_market_catalysts(self, research_data: ResearchData, growth_rate: float, market_size: float) -> list[str]:
+        """Describe the primary market catalysts and momentum drivers."""
+        catalysts = [
+            f"Large addressable market of ${market_size:,.0f} creates durable expansion potential.",
+            f"Growth trajectory of {growth_rate * 100:.1f}% supports sustained demand acceleration.",
+            f"{research_data.industry} macro tailwinds support a constructive IPO window.",
+        ]
+        if "strong" in research_data.competitive_position.lower() or "leader" in research_data.competitive_position.lower():
+            catalysts.append("Strong competitive positioning should help defend pricing power and customer retention.")
+        return catalysts[:4]
+
+    def _build_key_risks(self, risk_level: str, sentiment_label: str, competitive_position: str) -> list[str]:
+        """Translate the risk profile into investor-facing key risks."""
+        risks = [
+            f"Execution risk remains elevated in a {risk_level.lower()} risk profile.",
+            f"Market sentiment is currently {sentiment_label.lower()}, which could affect near-term price action.",
+        ]
+        if "weak" in competitive_position.lower() or "challenged" in competitive_position.lower():
+            risks.append("Competitive intensity could pressure market share and gross margin expansion.")
+        return risks[:4]
+
     def analyze(self, research_data: ResearchData, filing_summary: dict | None = None) -> IPOInsight:
         """Analyze research data and generate investment signals.
         
@@ -276,11 +307,15 @@ class AnalysisAgent(BaseAgent):
             float(research_data.market_size),
         )
 
+        investment_grade = self._determine_investment_grade(recommendation_score, str(risk_info["risk_level"]), sentiment_label)
+        market_catalysts = self._build_market_catalysts(research_data, float(research_data.growth_rate), float(research_data.market_size))
+        key_risks = self._build_key_risks(str(risk_info["risk_level"]), sentiment_label, research_data.competitive_position)
+
         scenario_summary = (
             "Scenario view: base case assumes steady execution, bull case benefits from acceleration, "
             "while bear case reflects slower growth and increased execution risk."
         )
-        
+
         # Generate key drivers from research
         key_drivers = [
             f"Large market opportunity in {research_data.industry}.",
@@ -289,7 +324,7 @@ class AnalysisAgent(BaseAgent):
         ]
         if research_data.notes:
             key_drivers.extend(research_data.notes[:2])  # Add top 2 research notes
-            
+
         comparables = [
             "Peer A: similar growth profile with robust pipeline execution",
             "Peer B: moderate valuation premium amid strong market demand",
@@ -324,6 +359,9 @@ class AnalysisAgent(BaseAgent):
             risk_matrix=risk_matrix,
             scenario_summary=scenario_summary,
             comparables=comparables,
+            market_catalysts=market_catalysts,
+            key_risks=key_risks,
+            investment_grade=investment_grade,
         )
         
         logger.info(f"Analysis complete: {research_data.company_name} - Score: {recommendation_score}, Signal: {valuation_signal}")

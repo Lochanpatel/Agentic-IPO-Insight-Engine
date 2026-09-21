@@ -117,6 +117,9 @@ class IPOInsight:
     risk_matrix: Dict[str, str] = field(default_factory=dict)
     scenario_summary: str = ""
     comparables: List[str] = field(default_factory=list)
+    market_catalysts: List[str] = field(default_factory=list)
+    key_risks: List[str] = field(default_factory=list)
+    investment_grade: str = "Neutral"
 
     def __post_init__(self) -> None:
         """Validate IPOInsight after initialization."""
@@ -128,6 +131,8 @@ class IPOInsight:
             logger.warning(f"Invalid valuation_signal: {self.valuation_signal}")
         if self.confidence not in ("Low", "Medium", "High"):
             logger.warning(f"Invalid confidence: {self.confidence}")
+        if self.investment_grade not in ("Buy", "Accumulate", "Watchlist", "Speculative", "Neutral"):
+            logger.warning(f"Invalid investment_grade: {self.investment_grade}")
 
     def is_bullish(self) -> bool:
         """Check if insight indicates bullish outlook.
@@ -235,6 +240,21 @@ class IPOInsight:
             lines.append("- No comparable benchmark data available.")
 
         lines.extend(["", "Investment Thesis:", self.thesis])
+
+        lines.append("\nMarket Catalysts:")
+        if self.market_catalysts:
+            lines.extend(f"- {catalyst}" for catalyst in self.market_catalysts)
+        else:
+            lines.append("- No specific market catalysts identified.")
+
+        lines.append("\nKey Risks:")
+        if self.key_risks:
+            lines.extend(f"- {risk}" for risk in self.key_risks)
+        else:
+            lines.append("- No key risks identified.")
+
+        lines.append(f"\nInvestment Grade: {self.investment_grade}")
+
         return "\n".join(lines)
 
     def to_dict(self) -> Dict[str, object]:
@@ -265,6 +285,9 @@ class IPOInsight:
             "risk_matrix": self.risk_matrix,
             "scenario_summary": self.scenario_summary,
             "comparables": self.comparables,
+            "market_catalysts": self.market_catalysts,
+            "key_risks": self.key_risks,
+            "investment_grade": self.investment_grade,
         }
 
 

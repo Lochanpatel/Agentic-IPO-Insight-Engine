@@ -21,7 +21,8 @@ def build_ipo_summary(insight: IPOInsight) -> str:
     """
     summary = (
         f"{insight.company_name} ({insight.ticker}) - Score {insight.recommendation_score}/10 | "
-        f"Risk: {insight.risk_level} | Signal: {insight.valuation_signal} | Confidence: {insight.confidence}"
+        f"Risk: {insight.risk_level} | Signal: {insight.valuation_signal} | "
+        f"Grade: {insight.investment_grade} | Confidence: {insight.confidence}"
     )
     logger.debug(f"Summary built for {insight.ticker}")
     return summary
@@ -79,6 +80,7 @@ def build_executive_summary(insight: IPOInsight) -> str:
         f"Recommendation Score: {insight.recommendation_score}/10",
         f"Valuation Signal: {insight.valuation_signal}",
         f"Confidence Level: {insight.confidence}",
+        f"Investment Grade: {insight.investment_grade}",
         f"Risk Level: {insight.risk_level}",
         "",
         "Investment Thesis:",
@@ -132,7 +134,8 @@ INVESTOR BRIEF - {insight.company_name} ({insight.ticker})
 QUICK STATS:
   Recommendation Score:  {insight.recommendation_score}/10
   Valuation Signal:      {insight.valuation_signal}
-  Investment Thesis:     {insight.confidence}
+  Investment Grade:      {insight.investment_grade}
+  Confidence:            {insight.confidence}
   Risk Assessment:       {risk_color}
 
 KEY METRICS:
@@ -140,6 +143,12 @@ KEY METRICS:
 
 SCENARIO ANALYSIS:
 {build_scenario_summary(insight)}
+
+MARKET CATALYSTS:
+{chr(10).join(f'  • {item}' for item in insight.market_catalysts) if insight.market_catalysts else '  • No specific catalysts identified.'}
+
+KEY RISKS:
+{chr(10).join(f'  • {item}' for item in insight.key_risks) if insight.key_risks else '  • No material risks identified.'}
 
 MARKET CONTEXT:
 {insight.market_summary}
@@ -181,9 +190,12 @@ def export_report_json(insight: IPOInsight) -> dict:
             "risk_level": insight.risk_level,
             "valuation_signal": insight.valuation_signal,
             "confidence": insight.confidence,
+            "investment_grade": insight.investment_grade,
             "thesis": insight.thesis,
             "scenario_summary": insight.scenario_summary,
             "valuation_range": insight.valuation_range,
+            "market_catalysts": insight.market_catalysts,
+            "key_risks": insight.key_risks,
         },
         "financials": {
             "market_summary": insight.market_summary,

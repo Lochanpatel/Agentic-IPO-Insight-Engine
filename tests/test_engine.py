@@ -23,3 +23,9 @@ def test_analyze_ipo_includes_scenario_and_sentiment_data():
     assert insight.valuation_range
     assert "base_case" in insight.valuation_range
     assert insight.risk_heatmap
+    assert insight.price_target_band
+    assert insight.competitor_benchmark
+    assert insight.risk_matrix
+    assert insight.investment_grade in {"Buy", "Accumulate", "Watchlist", "Speculative", "Neutral"}
+    assert insight.market_catalysts
+    assert insight.key_risks
