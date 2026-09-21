@@ -112,6 +112,9 @@ class IPOInsight:
     sentiment_score: int = 50
     sentiment_label: str = "Neutral"
     risk_heatmap: Dict[str, str] = field(default_factory=dict)
+    price_target_band: Dict[str, float] = field(default_factory=dict)
+    competitor_benchmark: List[Dict[str, object]] = field(default_factory=list)
+    risk_matrix: Dict[str, str] = field(default_factory=dict)
     scenario_summary: str = ""
     comparables: List[str] = field(default_factory=list)
 
@@ -184,9 +187,29 @@ class IPOInsight:
                 lines.append(self.scenario_summary)
             lines.append("")
 
+        if self.price_target_band:
+            lines.extend(["Price Target Band:"])
+            for label, value in self.price_target_band.items():
+                lines.append(f"- {label.replace('_', ' ').title()}: ${value:,.0f}")
+            lines.append("")
+
         if self.risk_heatmap:
             lines.extend(["Risk Heatmap:"])
             for label, level in self.risk_heatmap.items():
+                lines.append(f"- {label.replace('_', ' ').title()}: {level}")
+            lines.append("")
+
+        if self.competitor_benchmark:
+            lines.extend(["Competitor Benchmarking:"])
+            for comp in self.competitor_benchmark:
+                name = comp.get("name", "Competitor")
+                multiple = comp.get("ev_revenue_multiple", 0.0)
+                lines.append(f"- {name}: EV/Revenue {multiple:.2f}x")
+            lines.append("")
+
+        if self.risk_matrix:
+            lines.extend(["Risk Matrix:"])
+            for label, level in self.risk_matrix.items():
                 lines.append(f"- {label.replace('_', ' ').title()}: {level}")
             lines.append("")
 
@@ -237,6 +260,9 @@ class IPOInsight:
             "sentiment_score": self.sentiment_score,
             "sentiment_label": self.sentiment_label,
             "risk_heatmap": self.risk_heatmap,
+            "price_target_band": self.price_target_band,
+            "competitor_benchmark": self.competitor_benchmark,
+            "risk_matrix": self.risk_matrix,
             "scenario_summary": self.scenario_summary,
             "comparables": self.comparables,
         }

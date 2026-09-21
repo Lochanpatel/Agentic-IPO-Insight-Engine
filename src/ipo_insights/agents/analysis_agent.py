@@ -184,6 +184,35 @@ class AnalysisAgent(BaseAgent):
             "bear_case": round(bear_case, 2),
         }
 
+    def _calculate_price_target_band(self, fair_value_estimate: float, confidence: str) -> dict[str, float]:
+        """Build a low/base/high price target range around fair value."""
+        confidence_multiplier = {"High": 1.08, "Medium": 1.0, "Low": 0.92}.get(confidence, 1.0)
+        base = fair_value_estimate * confidence_multiplier
+        return {
+            "low": round(base * 0.9, 2),
+            "base": round(base, 2),
+            "high": round(base * 1.15, 2),
+        }
+
+    def _build_competitor_benchmark(self, market_cap: float, revenue: float) -> list[dict[str, object]]:
+        """Create a simple peer benchmarking set based on estimated company scale."""
+        ev_revenue = market_cap / revenue if revenue else 0.0
+        peers = [
+            {"name": "Peer A", "ev_revenue_multiple": round(ev_revenue * 0.95, 2), "growth_profile": "Strong"},
+            {"name": "Peer B", "ev_revenue_multiple": round(ev_revenue * 1.05, 2), "growth_profile": "Moderate"},
+            {"name": "Peer C", "ev_revenue_multiple": round(ev_revenue * 0.88, 2), "growth_profile": "Stable"},
+        ]
+        return peers
+
+    def _build_risk_matrix(self, risk_level: str, sentiment_label: str, market_size: float) -> dict[str, str]:
+        """Summarize key risks as a simple matrix."""
+        return {
+            "market_risk": "Low" if market_size >= 3_500_000_000 else "Medium",
+            "execution_risk": risk_level,
+            "sentiment_risk": "Low" if sentiment_label in {"Bullish", "Positive"} else "Medium" if sentiment_label == "Neutral" else "High",
+            "demand_risk": "Low" if risk_level == "Low" else "Medium" if risk_level == "Moderate" else "High",
+        }
+
     def analyze(self, research_data: ResearchData, filing_summary: dict | None = None) -> IPOInsight:
         """Analyze research data and generate investment signals.
         
@@ -226,20 +255,31 @@ class AnalysisAgent(BaseAgent):
             str(risk_info["risk_level"]),
         )
 
-        scenario_summary = (
-            "Scenario view: base case assumes steady execution, bull case benefits from acceleration, "
-            "while bear case reflects slower growth and increased execution risk."
-        )
-        
         # Calculate recommendation score with refined logic
         recommendation_score = self._calculate_recommendation_score(
             research_data.growth_rate,
             risk_info["risk_level"],
             research_data.competitive_position
         )
-        
+
         # Determine valuation signal
         valuation_signal, confidence = self._determine_valuation_signal(recommendation_score)
+
+        price_target_band = self._calculate_price_target_band(fair_value_estimate, confidence)
+        competitor_benchmark = self._build_competitor_benchmark(
+            float(metrics.get("market_cap", 0.0)),
+            float(metrics.get("revenue", 0.0)),
+        )
+        risk_matrix = self._build_risk_matrix(
+            str(risk_info["risk_level"]),
+            sentiment_label,
+            float(research_data.market_size),
+        )
+
+        scenario_summary = (
+            "Scenario view: base case assumes steady execution, bull case benefits from acceleration, "
+            "while bear case reflects slower growth and increased execution risk."
+        )
         
         # Generate key drivers from research
         key_drivers = [
@@ -279,6 +319,9 @@ class AnalysisAgent(BaseAgent):
             sentiment_score=sentiment_score,
             sentiment_label=sentiment_label,
             risk_heatmap=risk_heatmap,
+            price_target_band=price_target_band,
+            competitor_benchmark=competitor_benchmark,
+            risk_matrix=risk_matrix,
             scenario_summary=scenario_summary,
             comparables=comparables,
         )
