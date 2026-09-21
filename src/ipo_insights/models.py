@@ -107,6 +107,8 @@ class IPOInsight:
     valuation_signal: str = "Neutral"
     confidence: str = "Medium"
     key_drivers: List[str] = field(default_factory=list)
+    valuation_range: Dict[str, float] = field(default_factory=dict)
+    scenario_summary: str = ""
     comparables: List[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -166,13 +168,24 @@ class IPOInsight:
             "Financial Summary:",
             self.financial_summary,
             "",
+        ]
+
+        if self.valuation_range:
+            lines.extend(["Scenario Analysis:"])
+            for label, value in self.valuation_range.items():
+                lines.append(f"- {label.replace('_', ' ').title()}: ${value:,.0f}")
+            if self.scenario_summary:
+                lines.append(self.scenario_summary)
+            lines.append("")
+
+        lines.extend([
             f"Recommendation Score: {self.recommendation_score}/10",
             f"Risk Level: {self.risk_level}",
             f"Valuation Signal: {self.valuation_signal}",
             f"Confidence: {self.confidence}",
             "",
             "Key Drivers:",
-        ]
+        ])
 
         if self.key_drivers:
             lines.extend(f"- {driver}" for driver in self.key_drivers)
@@ -207,6 +220,8 @@ class IPOInsight:
             "valuation_signal": self.valuation_signal,
             "confidence": self.confidence,
             "key_drivers": self.key_drivers,
+            "valuation_range": self.valuation_range,
+            "scenario_summary": self.scenario_summary,
             "comparables": self.comparables,
         }
 

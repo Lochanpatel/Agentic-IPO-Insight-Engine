@@ -119,6 +119,30 @@ class AnalysisAgent(BaseAgent):
         else:
             return "Cautious", "Low"
 
+    def _calculate_valuation_range(self, market_cap: float, growth_rate: float, risk_level: str) -> dict[str, float]:
+        """Estimate base, bull, and bear valuation ranges.
+        
+        Args:
+            market_cap: Estimated market capitalization
+            growth_rate: Growth rate as decimal
+            risk_level: Risk level from risk assessment
+            
+        Returns:
+            Dictionary of valuation scenarios keyed by scenario name
+        """
+        risk_multiplier = {"Low": 0.95, "Moderate": 1.0, "High": 1.12}.get(risk_level, 1.0)
+        growth_adjustment = 1.0 + max(0.0, growth_rate)
+
+        base_case = market_cap * 0.9 * risk_multiplier
+        bull_case = market_cap * 1.25 * growth_adjustment * risk_multiplier
+        bear_case = market_cap * 0.65 * (1.0 - min(0.35, growth_rate))
+
+        return {
+            "base_case": round(base_case, 2),
+            "bull_case": round(bull_case, 2),
+            "bear_case": round(bear_case, 2),
+        }
+
     def analyze(self, research_data: ResearchData, filing_summary: dict | None = None) -> IPOInsight:
         """Analyze research data and generate investment signals.
         
@@ -144,6 +168,16 @@ class AnalysisAgent(BaseAgent):
             research_data.market_size, 
             research_data.growth_rate, 
             research_data.competitive_position
+        )
+        
+        valuation_range = self._calculate_valuation_range(
+            float(metrics.get("market_cap", 0.0)),
+            float(research_data.growth_rate),
+            str(risk_info["risk_level"]),
+        )
+        scenario_summary = (
+            "Scenario view: base case assumes steady execution, bull case benefits from acceleration, "
+            "while bear case reflects slower growth and increased execution risk."
         )
         
         # Calculate recommendation score with refined logic
@@ -189,6 +223,8 @@ class AnalysisAgent(BaseAgent):
             valuation_signal=valuation_signal,
             confidence=confidence,
             key_drivers=key_drivers,
+            valuation_range=valuation_range,
+            scenario_summary=scenario_summary,
             comparables=comparables,
         )
         

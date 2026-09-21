@@ -100,6 +100,9 @@ def build_executive_summary(insight: IPOInsight) -> str:
     
     summary.extend([
         "",
+        "Scenario Analysis:",
+        build_scenario_summary(insight),
+        "",
         "Financial Profile:",
         insight.financial_summary,
     ])
@@ -134,6 +137,9 @@ QUICK STATS:
 
 KEY METRICS:
 {insight.financial_summary}
+
+SCENARIO ANALYSIS:
+{build_scenario_summary(insight)}
 
 MARKET CONTEXT:
 {insight.market_summary}
@@ -176,6 +182,8 @@ def export_report_json(insight: IPOInsight) -> dict:
             "valuation_signal": insight.valuation_signal,
             "confidence": insight.confidence,
             "thesis": insight.thesis,
+            "scenario_summary": insight.scenario_summary,
+            "valuation_range": insight.valuation_range,
         },
         "financials": {
             "market_summary": insight.market_summary,
@@ -187,3 +195,24 @@ def export_report_json(insight: IPOInsight) -> dict:
     
     logger.info(f"JSON export prepared for {insight.ticker}")
     return export_data
+
+
+def build_scenario_summary(insight: IPOInsight) -> str:
+    """Build a succinct scenario analysis summary.
+    
+    Args:
+        insight: IPOInsight object with analysis results
+        
+    Returns:
+        Scenario summary string
+    """
+    if not insight.valuation_range:
+        return "No scenario analysis available."
+
+    base_case = insight.valuation_range.get("base_case", 0.0)
+    bull_case = insight.valuation_range.get("bull_case", 0.0)
+    bear_case = insight.valuation_range.get("bear_case", 0.0)
+    return (
+        f"Valuation range: base ${base_case:,.0f} | bull ${bull_case:,.0f} | bear ${bear_case:,.0f}. "
+        f"{insight.scenario_summary or 'Scenario analysis indicates a moderate outlook.'}"
+    )
