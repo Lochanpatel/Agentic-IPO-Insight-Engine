@@ -228,3 +228,104 @@ def build_scenario_summary(insight: IPOInsight) -> str:
         f"Valuation range: base ${base_case:,.0f} | bull ${bull_case:,.0f} | bear ${bear_case:,.0f}. "
         f"{insight.scenario_summary or 'Scenario analysis indicates a moderate outlook.'}"
     )
+
+
+def build_institutional_memo(insight: IPOInsight) -> str:
+    """Build a structured, memo-style report suitable for institutional distribution.
+
+    The memo includes an executive summary, detailed financials, scenario analysis,
+    peer benchmarking, market catalysts, risks, and a concise recommendation.
+    """
+    # Header
+    lines = [
+        f"INSTITUTIONAL MEMO - {insight.company_name} ({insight.ticker})",
+        "=" * 80,
+        f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        "",
+    ]
+
+    # Executive summary
+    lines.append("EXECUTIVE SUMMARY")
+    lines.append("-" * 40)
+    lines.append(build_executive_summary(insight))
+    lines.append("")
+
+    # Financials
+    lines.append("DETAILED FINANCIAL PROFILE")
+    lines.append("-" * 40)
+    lines.append(insight.financial_summary)
+    lines.append("")
+
+    # Scenario analysis
+    lines.append("SCENARIO ANALYSIS")
+    lines.append("-" * 40)
+    if insight.valuation_range:
+        base = insight.valuation_range.get("base_case", 0.0)
+        bull = insight.valuation_range.get("bull_case", 0.0)
+        bear = insight.valuation_range.get("bear_case", 0.0)
+        lines.append(f"Base: ${base:,.0f} | Bull: ${bull:,.0f} | Bear: ${bear:,.0f}")
+        lines.append("")
+    lines.append(build_scenario_summary(insight))
+    lines.append("")
+
+    # Peer benchmarking table (text)
+    lines.append("PEER BENCHMARKING")
+    lines.append("-" * 40)
+    if insight.competitor_benchmark:
+        lines.append(f"{'Peer':<20} {'EV/Rev':>8} {'Profile':>12}")
+        lines.append(f"{'-'*42}")
+        for peer in insight.competitor_benchmark:
+            name = peer.get('name', 'Peer')
+            ev = peer.get('ev_revenue_multiple', 0.0)
+            profile = peer.get('growth_profile', '')
+            lines.append(f"{name:<20} {ev:8.2f} {profile:>12}")
+    else:
+        lines.append("No peer benchmarking available.")
+    lines.append("")
+
+    # Catalysts & Risks
+    lines.append("MARKET CATALYSTS")
+    lines.append("-" * 40)
+    if insight.market_catalysts:
+        for c in insight.market_catalysts:
+            lines.append(f"- {c}")
+    else:
+        lines.append("- None identified")
+    lines.append("")
+
+    lines.append("KEY RISKS")
+    lines.append("-" * 40)
+    if insight.key_risks:
+        for r in insight.key_risks:
+            lines.append(f"- {r}")
+    else:
+        lines.append("- None identified")
+    lines.append("")
+
+    # Recommendation and metadata
+    lines.append("RECOMMENDATION")
+    lines.append("-" * 40)
+    lines.append(f"Recommendation Score: {insight.recommendation_score}/10")
+    lines.append(f"Valuation Signal: {insight.valuation_signal} | Confidence: {insight.confidence} | Grade: {insight.investment_grade}")
+    lines.append("")
+
+    # Append JSON-export hint for downstream systems
+    lines.append("EXPORT NOTE: Use export_report_json(insight) for machine-readable payload.")
+
+    return "\n".join(lines)
+
+
+def export_report_html(insight: IPOInsight) -> str:
+    """Export the institutional memo as a minimal HTML document.
+
+    This is intended for quick email/portal rendering; styling is intentionally minimal.
+    """
+    memo = build_institutional_memo(insight)
+    html = (
+        "<html><head><meta charset='utf-8'><title>Institutional Memo</title>"
+        "<style>body{font-family:Arial,Helvetica,sans-serif;margin:20px;white-space:pre-wrap}</style></head>"
+        "<body>"
+        f"<pre>{memo}</pre>"
+        "</body></html>"
+    )
+    return html
